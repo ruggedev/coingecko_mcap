@@ -1,20 +1,28 @@
+from typing import List
 import requests as rq
-from datetime import datetime, timedelta
 import time
+import logging
+import json
+import pytz
+from datetime import datetime, timedelta
 
 MAX_ATTEMPT = 10
 
+extra = {'status_code': '', 'tag': '', 'method': ''}
 
-def timestamp_to_datestr(_timestamp, _format=None) -> str:
+logging.basicConfig(filename='server.log',
+                    level=logging.INFO,
+                    filemode='a',
+                    format='[%(method)s][%(tag)s][%(status_code)s] %(asctime)s -  %(message)s')
+
+
+def timestamp_to_datestr(_timestamp, _format='%Y-%m-%d') -> datetime:
     """
     :param _timestamp: UNIX timestamp
     :param _format: datestr format, default as YYYY-MM-DD
     :return: datestr in specific format
     """
-    if _format:
-        return datetime.fromtimestamp(_timestamp).strftime(_format)
-    else:
-        return datetime.fromtimestamp(_timestamp).strftime('%Y-%m-%d')
+    return datetime.fromtimestamp(_timestamp, pytz.UTC)
 
 
 def datestr_to_timestamp(_datestr) -> int:
@@ -87,12 +95,14 @@ def get_list_of_month(start, end):
     return arr
 
 
-def get(endpoint):
+def get(endpoint, tag=None):
     attempt = 0
     while attempt < MAX_ATTEMPT:
         attempt += 1
         try:
             res = rq.get(endpoint)
+            logging.info(f'{endpoint}, attemp: {attempt}',
+                         extra={'status_code': res.status_code, 'tag': tag, 'method': "GET"})
             if res.status_code == 200:
                 return res.json()
             elif res.status_code == 429:
@@ -100,4 +110,21 @@ def get(endpoint):
             else:
                 time.sleep(2)
         except Exception as e:
-            print(e)
+            logging.exception(e, extra={'status_code': 'Exception', 'tag': tag})
+
+
+def get_days_diff(start_date: str, end_date: str) -> List[str]:
+    """
+    :param start_date: datestr in dd/mm/YYYY format e.g. 15-8-2022
+    :param end_date: datestr in dd/mm/YYYY format e.g. 15-8-2022
+    :return: list of datestr > start and < end
+    """
+    end_date = datetime.strptime(end_date, '%d-%m-%Y')
+    start_date = datetime.strptime(start_date, '%d-%m-%Y')
+
+    dates = []
+    while end_date - timedelta(days=1) > start_date:
+        start_date = start_date + timedelta(days=1)
+        dates.append(datetime.strftime(start_date, '%d-%m-%Y'))
+
+    return dates
