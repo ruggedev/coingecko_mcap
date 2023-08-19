@@ -34,5 +34,5 @@ class Coingecko:
         endpoint = self.get_url(f'coins/{token_id}/history?date={date_str}')
 
         res = utils.get(endpoint=endpoint, tag='coingecko')
-        return float(res['market_data']['market_cap']['usd']) if 'market_data' in res else 0.0
+        return float(res['market_data']['market_cap']['usd'] or 0.0) if 'market_data' in res else 0.0
 
