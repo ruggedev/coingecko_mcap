@@ -1,6 +1,6 @@
 from datetime import datetime
 import utils
-
+import json
 
 class Coingecko:
     free_url = 'https://api.coingecko.com/api/v3'
@@ -14,6 +14,17 @@ class Coingecko:
             return f'{self.pro_url}/{endpoint}&x_cg_pro_api_key={self.key}'
         else:
             return f'{self.free_url}/{endpoint}'
+
+    def get_top_coins_by_mcap(self, n):
+        endpoint = self.get_url("coins/markets?vs_currency=usd&order="
+                                f"market_cap_desc&per_page={n}&page=1&sparkline=false&locale=en")
+        data = utils.get(endpoint=endpoint, tag='coingecko:coins')
+
+        ks = ['id', 'symbol', 'current_price', 'market_cap', 'market_cap_rank']  # The keys you want
+        filtered_arr = [{k: v for k, v in c.items() if k in ks} for c in data]
+        yyyymmdd = datetime.today().strftime('%Y%m%d')
+        with open(f"tokens_{yyyymmdd}.json", "w") as outfile:
+            json.dump(filtered_arr, outfile, indent=4, sort_keys=False)
 
     def get_first_price_exist_date(self, token_id) -> tuple[int, datetime] | None:
         endpoint = self.get_url(
@@ -35,4 +46,3 @@ class Coingecko:
 
         res = utils.get(endpoint=endpoint, tag='coingecko')
         return float(res['market_data']['market_cap']['usd'] or 0.0) if 'market_data' in res else 0.0
-
